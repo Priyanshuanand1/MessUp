@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">MessUp</string>
+    <string name="title_activity_login_screen">LoginScreen</string>
+    <string name="title_activity_signup_screen">SignupScreen</string>
+    <string name="title_activity_home_screen">HomeScreen</string>
+    <string name="title_activity_menu_screen">MenuScreen</string>
+    <string name="title_activity_order_screen">OrderScreen</string>
+    <string name="title_activity_announcements_screen">AnnouncementsScreen</string>
+    <string name="title_activity_leave_screen">LeaveScreen</string>
+    <string name="title_activity_feedback_screen">FeedbackScreen</string>
+    <string name="title_activity_admin_screen">AdminScreen</string>
+    <string name="title_activity_admin_login_screen">AdminLoginScreen</string>
+    <string name="title_activity_admin_signup_screen">AdminSignupScreen</string>
+</resources>
