@@ -15,6 +15,11 @@
         android:theme="@style/Theme.MessUp"
         tools:targetApi="31">
         <activity
+            android:name=".NavItem"
+            android:exported="false"
+            android:label="@string/title_activity_nav_item"
+            android:theme="@style/Theme.MessUp" />
+        <activity
             android:name=".FeedbacksScreen"
             android:exported="false"
             android:label="@string/title_activity_feedbacks_screen"

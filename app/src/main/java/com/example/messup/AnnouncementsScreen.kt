@@ -4,41 +4,59 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.ValueEventListener
 import androidx.navigation.NavController
+import androidx.navigation.compose.currentBackStackEntryAsState
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AnnouncementsScreen(navController: NavController) { // Added NavController parameter
-    var announcements by remember { mutableStateOf(listOf<String>()) }
-    val database = FirebaseDatabase.getInstance().getReference("announcements")
+fun AnnouncementsScreen(navController: NavController) {
+    var announcements by remember { mutableStateOf(listOf<Map<String, Any>>()) }
+    val db = FirebaseFirestore.getInstance()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    var listenerRegistration by remember { mutableStateOf<ListenerRegistration?>(null) }
 
-    // Fetch announcements in real-time
-    LaunchedEffect(Unit) {
-        database.addValueEventListener(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                announcements = snapshot.children.map { it.getValue(String::class.java) ?: "" }
-            }
-            override fun onCancelled(error: DatabaseError) {
-                scope.launch {
-                    snackbarHostState.showSnackbar("Error fetching announcements: ${error.message}")
+    // Define the navigation items for NavigationBar
+    val navItems = listOf(
+        NavItem("Home", Icons.Default.Home, "home"),
+        NavItem("Menu", Icons.Default.RestaurantMenu, "menu"),
+        NavItem("Orders", Icons.Default.ShoppingCart, "order"),
+        NavItem("Feedback", Icons.Default.Feedback, "feedback"),
+        NavItem("Leave", Icons.Default.ExitToApp, "leave"),
+        NavItem("Announcements", Icons.Default.Announcement, "announcements")
+    )
+
+    // Get the current back stack entry to highlight the selected item
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    DisposableEffect(Unit) {
+        val listener = db.collection("announcements")
+            .addSnapshotListener { snapshot, e ->
+                if (e != null) {
+                    scope.launch { snackbarHostState.showSnackbar("Error fetching announcements: ${e.message}") }
+                    return@addSnapshotListener
+                }
+                if (snapshot != null) {
+                    announcements = snapshot.documents.map { doc ->
+                        val data = doc.data ?: emptyMap()
+                        data + mapOf("id" to (doc.id ?: ""))
+                    }
                 }
             }
-        })
+        listenerRegistration = listener
+        onDispose { listenerRegistration?.remove() }
     }
 
     Scaffold(
@@ -51,13 +69,7 @@ fun AnnouncementsScreen(navController: NavController) { // Added NavController p
                     titleContentColor = MaterialTheme.colorScheme.onPrimary
                 ),
                 navigationIcon = {
-                    IconButton(onClick = { /* Add drawer logic if needed */ }) {
-                        Icon(
-                            imageVector = Icons.Filled.Menu,
-                            contentDescription = "Open Drawer",
-                            tint = MaterialTheme.colorScheme.onPrimary
-                        )
-                    }
+                    Spacer(modifier = Modifier.width(8.dp)) // Placeholder, no navigation icon
                 },
                 actions = {
                     Button(
@@ -74,6 +86,38 @@ fun AnnouncementsScreen(navController: NavController) { // Added NavController p
                     }
                 }
             )
+        },
+        bottomBar = {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ) {
+                navItems.forEach { item ->
+                    NavigationBarItem(
+                        icon = { Icon(item.icon, contentDescription = item.label) },
+                        label = { Text(item.label) },
+                        selected = currentRoute == item.route,
+                        onClick = {
+                            if (currentRoute != item.route) {
+                                navController.navigate(item.route) {
+                                    popUpTo(navController.graph.startDestinationId) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            }
+                        },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.onPrimary,
+                            selectedTextColor = MaterialTheme.colorScheme.onPrimary,
+                            unselectedIconColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.6f),
+                            unselectedTextColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.6f),
+                            indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                        )
+                    )
+                }
+            }
         }
     ) { paddingValues ->
         LazyColumn(
@@ -88,12 +132,23 @@ fun AnnouncementsScreen(navController: NavController) { // Added NavController p
                     modifier = Modifier.fillMaxWidth(),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
-                    Text(
-                        text = announcement,
-                        modifier = Modifier.padding(16.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontSize = 16.sp // Increased for readability
-                    )
+                    Column(
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Title: ${announcement["title"]?.toString() ?: "N/A"}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontSize = 16.sp
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Message: ${announcement["message"]?.toString() ?: "N/A"}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontSize = 14.sp
+                        )
+                    }
                 }
             }
         }

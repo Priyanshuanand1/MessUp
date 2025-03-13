@@ -13,4 +13,5 @@
     <string name="title_activity_admin_signup_screen">AdminSignupScreen</string>
     <string name="title_activity_leave_requests_screen">LeaveRequestsScreen</string>
     <string name="title_activity_feedbacks_screen">FeedbacksScreen</string>
+    <string name="title_activity_nav_item">NavItem</string>
 </resources>

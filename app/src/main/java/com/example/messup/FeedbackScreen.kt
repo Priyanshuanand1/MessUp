@@ -2,7 +2,7 @@ package com.example.messup
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -10,20 +10,35 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FeedbackScreen(navController: NavController) { // Added NavController parameter
+fun FeedbackScreen(navController: NavController) {
     var feedback by remember { mutableStateOf("") }
     val db = FirebaseFirestore.getInstance()
     val auth = FirebaseAuth.getInstance()
     var error by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    // Define the navigation items for NavigationBar
+    val navItems = listOf(
+        NavItem("Home", Icons.Default.Home, "home"),
+        NavItem("Menu", Icons.Default.RestaurantMenu, "menu"),
+        NavItem("Orders", Icons.Default.ShoppingCart, "order"),
+        NavItem("Feedback", Icons.Default.Feedback, "feedback"),
+        NavItem("Leave", Icons.Default.ExitToApp, "leave"),
+        NavItem("Announcements", Icons.Default.Announcement, "announcements")
+    )
+
+    // Get the current back stack entry to highlight the selected item
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -35,13 +50,7 @@ fun FeedbackScreen(navController: NavController) { // Added NavController parame
                     titleContentColor = MaterialTheme.colorScheme.onPrimary
                 ),
                 navigationIcon = {
-                    IconButton(onClick = { /* Add drawer logic if needed */ }) {
-                        Icon(
-                            imageVector = Icons.Filled.Menu,
-                            contentDescription = "Open Drawer",
-                            tint = MaterialTheme.colorScheme.onPrimary
-                        )
-                    }
+                    Spacer(modifier = Modifier.width(8.dp)) // Placeholder, no navigation icon
                 },
                 actions = {
                     Button(
@@ -58,6 +67,38 @@ fun FeedbackScreen(navController: NavController) { // Added NavController parame
                     }
                 }
             )
+        },
+        bottomBar = {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ) {
+                navItems.forEach { item ->
+                    NavigationBarItem(
+                        icon = { Icon(item.icon, contentDescription = item.label) },
+                        label = { Text(item.label) },
+                        selected = currentRoute == item.route,
+                        onClick = {
+                            if (currentRoute != item.route) {
+                                navController.navigate(item.route) {
+                                    popUpTo(navController.graph.startDestinationId) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            }
+                        },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.onPrimary,
+                            selectedTextColor = MaterialTheme.colorScheme.onPrimary,
+                            unselectedIconColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.6f),
+                            unselectedTextColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.6f),
+                            indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                        )
+                    )
+                }
+            }
         }
     ) { paddingValues ->
         Column(
@@ -78,7 +119,7 @@ fun FeedbackScreen(navController: NavController) { // Added NavController parame
                         onValueChange = { feedback = it },
                         label = { Text("Feedback", fontSize = 14.sp) },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = false // Allow multiline for feedback
+                        singleLine = false
                     )
                 }
             }
@@ -95,19 +136,13 @@ fun FeedbackScreen(navController: NavController) { // Added NavController parame
                         db.collection("feedbacks").add(feedbackData)
                             .addOnSuccessListener {
                                 feedback = ""
-                                scope.launch {
-                                    snackbarHostState.showSnackbar("Feedback submitted successfully!")
-                                }
+                                scope.launch { snackbarHostState.showSnackbar("Feedback submitted successfully!") }
                             }
                             .addOnFailureListener {
-                                scope.launch {
-                                    snackbarHostState.showSnackbar("Failed to submit feedback: ${it.message}")
-                                }
+                                scope.launch { snackbarHostState.showSnackbar("Failed to submit feedback: ${it.message}") }
                             }
                     } else {
-                        scope.launch {
-                            snackbarHostState.showSnackbar("Feedback cannot be empty")
-                        }
+                        scope.launch { snackbarHostState.showSnackbar("Feedback cannot be empty") }
                     }
                 },
                 modifier = Modifier
