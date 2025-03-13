@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -54,7 +55,8 @@ fun AdminScreen(navController: NavController) {
                     }
                     if (snapshot != null) {
                         val updatedMenuItems = snapshot.documents.mapNotNull { doc ->
-                            doc.data?.takeIf { it.containsKey("item") } ?: emptyMap()
+                            val data = doc.data?.takeIf { it.containsKey("item") } ?: emptyMap()
+                            data + mapOf("id" to (doc.id ?: "")) // Include document ID
                         }
                         menuItems = updatedMenuItems
                         println("Updated menuItems size: ${menuItems.size}")
@@ -162,8 +164,11 @@ fun AdminScreen(navController: NavController) {
                         containerColor = MaterialTheme.colorScheme.primary,
                         titleContentColor = MaterialTheme.colorScheme.onPrimary
                     ),
-                    navigationIcon = {
-                        IconButton(onClick = { scopeDrawer.launch { drawerState.open() } }) {
+                    navigationIcon = { // Explicitly placed in top left
+                        IconButton(
+                            onClick = { scopeDrawer.launch { drawerState.open() } },
+                            modifier = Modifier.padding(start = 8.dp) // Optional padding for clarity
+                        ) {
                             Icon(
                                 imageVector = Icons.Filled.Menu,
                                 contentDescription = "Open Drawer",
@@ -317,7 +322,7 @@ fun AdminScreen(navController: NavController) {
                     }
                 }
 
-                // Display All Menu Items
+                // Display All Menu Items with Delete Option
                 item {
                     Text("Menu Items", style = MaterialTheme.typography.titleLarge, fontSize = 18.sp)
                     Spacer(modifier = Modifier.height(8.dp))
@@ -331,20 +336,50 @@ fun AdminScreen(navController: NavController) {
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             items(menuItems) { item ->
+                                val itemId = item["id"]?.toString() ?: ""
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(vertical = 4.dp),
                                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                                 ) {
-                                    Text(
-                                        text = item["item"]?.toString() ?: "Unknown Item",
+                                    Row(
                                         modifier = Modifier
-                                            .padding(16.dp)
-                                            .fillMaxWidth(),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        fontSize = 16.sp
-                                    )
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = item["item"]?.toString() ?: "Unknown Item",
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            fontSize = 16.sp
+                                        )
+                                        IconButton(
+                                            onClick = {
+                                                if (itemId.isNotEmpty()) {
+                                                    db.collection("menu").document(itemId)
+                                                        .delete()
+                                                        .addOnSuccessListener {
+                                                            scope.launch {
+                                                                snackbarHostState.showSnackbar("Menu item deleted successfully!")
+                                                            }
+                                                        }
+                                                        .addOnFailureListener { e ->
+                                                            scope.launch {
+                                                                snackbarHostState.showSnackbar("Failed to delete menu item: ${e.message}")
+                                                            }
+                                                        }
+                                                }
+                                            }
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = "Delete Menu Item",
+                                                tint = Color.Red
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
