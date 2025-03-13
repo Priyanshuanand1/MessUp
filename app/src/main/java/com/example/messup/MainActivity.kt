@@ -38,15 +38,15 @@ fun AppNavigation() {
         composable("login") { LoginScreen(navController) }
         composable("signup") { SignupScreen(navController) }
         composable("admin_login") { AdminLoginScreen(navController) }
-        composable("admin_signup") { AdminSignupScreen(navController) } // Correct route
+        composable("admin_signup") { AdminSignupScreen(navController) }
         composable("home") { HomeScreen(navController) }
-        composable("admin") { AdminScreen(navController) } // Correct route
-        composable("menu") { MenuScreen() }
-        composable("order") { OrderScreen() }
-        composable("feedback") { FeedbackScreen() }
-        composable("leave") { LeaveScreen() }
+        composable("admin") { AdminScreen(navController) }
+        composable("menu") { MenuScreen(navController) } // Updated to pass navController
+        composable("order") { OrderScreen(navController) } // Update OrderScreen similarly
+        composable("feedback") { FeedbackScreen(navController) } // Update FeedbackScreen similarly
+        composable("leave") { LeaveScreen(navController) } // Update LeaveScreen similarly
         composable("manage_feedbacks") { FeedbacksScreen(navController) }
         composable("manage_leave_requests") { LeaveRequestsScreen(navController) }
-        composable("announcements") { AnnouncementsScreen() }
+        composable("announcements") { AnnouncementsScreen(navController) } // Update AnnouncementsScreen similarly
     }
 }
