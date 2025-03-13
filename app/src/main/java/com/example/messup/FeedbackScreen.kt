@@ -8,23 +8,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.launch
 
 @Composable
 fun FeedbackScreen() {
     var feedback by remember { mutableStateOf("") }
     val db = FirebaseFirestore.getInstance()
     val auth = FirebaseAuth.getInstance()
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-    var showSuccessMessage by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -34,26 +31,30 @@ fun FeedbackScreen() {
                 OutlinedTextField(
                     value = feedback,
                     onValueChange = { feedback = it },
-                    label = { Text("Your feedback") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = false
+                    label = { Text("Feedback") },
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }
+        Spacer(modifier = Modifier.height(16.dp))
         Button(
             onClick = {
-                if (feedback.isNotEmpty()) {
-                    val feedbackData = hashMapOf("feedback" to feedback, "user" to auth.currentUser?.email)
-                    db.collection("feedback").add(feedbackData)
+                val userEmail = auth.currentUser?.email
+                if (userEmail != null && feedback.isNotEmpty()) {
+                    val feedbackData = hashMapOf(
+                        "userEmail" to userEmail,
+                        "feedback" to feedback,
+                        "status" to "Pending"
+                    )
+                    db.collection("feedbacks").add(feedbackData)
                         .addOnSuccessListener {
                             feedback = ""
-                            showSuccessMessage = true
                         }
                         .addOnFailureListener {
-                            scope.launch {
-                                snackbarHostState.showSnackbar("Failed to submit feedback")
-                            }
+                            error = "Failed to submit feedback: ${it.message}"
                         }
+                } else {
+                    error = "Feedback cannot be empty"
                 }
             },
             modifier = Modifier.fillMaxWidth().height(50.dp),
@@ -61,14 +62,6 @@ fun FeedbackScreen() {
         ) {
             Text("Submit Feedback", style = MaterialTheme.typography.labelLarge)
         }
-    }
-
-    LaunchedEffect(showSuccessMessage) {
-        if (showSuccessMessage) {
-            scope.launch {
-                snackbarHostState.showSnackbar("Feedback submitted successfully!")
-                showSuccessMessage = false
-            }
-        }
+        error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp)) }
     }
 }

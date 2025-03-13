@@ -8,17 +8,35 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
+import kotlinx.coroutines.launch
 
 @Composable
 fun MenuScreen() {
     var menuItems by remember { mutableStateOf(listOf<Map<String, Any>>()) }
     val db = FirebaseFirestore.getInstance()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    var listenerRegistration by remember { mutableStateOf<ListenerRegistration?>(null) }
 
-    LaunchedEffect(Unit) {
-        db.collection("menu").get()
-            .addOnSuccessListener { result ->
-                menuItems = result.map { it.data }
+    // Set up real-time listener for menu items
+    DisposableEffect(Unit) {
+        val listener = db.collection("menu")
+            .addSnapshotListener { snapshot, e ->
+                if (e != null) {
+                    scope.launch {
+                        snackbarHostState.showSnackbar("Error fetching menu: ${e.message}")
+                    }
+                    return@addSnapshotListener
+                }
+                if (snapshot != null) {
+                    menuItems = snapshot.documents.map { it.data ?: emptyMap() }
+                }
             }
+        listenerRegistration = listener
+        onDispose {
+            listenerRegistration?.remove()
+        }
     }
 
     LazyColumn(

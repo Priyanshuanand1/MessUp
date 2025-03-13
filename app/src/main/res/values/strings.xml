@@ -11,4 +11,6 @@
     <string name="title_activity_admin_screen">AdminScreen</string>
     <string name="title_activity_admin_login_screen">AdminLoginScreen</string>
     <string name="title_activity_admin_signup_screen">AdminSignupScreen</string>
+    <string name="title_activity_leave_requests_screen">LeaveRequestsScreen</string>
+    <string name="title_activity_feedbacks_screen">FeedbacksScreen</string>
 </resources>

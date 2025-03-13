@@ -8,23 +8,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.launch
 
 @Composable
 fun OrderScreen() {
-    var order by remember { mutableStateOf("") }
+    var item by remember { mutableStateOf("") }
     val db = FirebaseFirestore.getInstance()
     val auth = FirebaseAuth.getInstance()
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-    var showSuccessMessage by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -32,43 +29,39 @@ fun OrderScreen() {
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 OutlinedTextField(
-                    value = order,
-                    onValueChange = { order = it },
-                    label = { Text("Enter your order") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    value = item,
+                    onValueChange = { item = it },
+                    label = { Text("Order Item") },
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }
+        Spacer(modifier = Modifier.height(16.dp))
         Button(
             onClick = {
-                if (order.isNotEmpty()) {
-                    val orderData = hashMapOf("order" to order, "user" to auth.currentUser?.email)
+                val userEmail = auth.currentUser?.email
+                if (userEmail != null && item.isNotEmpty()) {
+                    val orderData = hashMapOf(
+                        "userEmail" to userEmail,
+                        "item" to item,
+                        "status" to "Pending"
+                    )
                     db.collection("orders").add(orderData)
                         .addOnSuccessListener {
-                            order = ""
-                            showSuccessMessage = true
+                            item = ""
                         }
                         .addOnFailureListener {
-                            scope.launch {
-                                snackbarHostState.showSnackbar("Failed to place order")
-                            }
+                            error = "Failed to place order: ${it.message}"
                         }
+                } else {
+                    error = "Order item cannot be empty"
                 }
             },
             modifier = Modifier.fillMaxWidth().height(50.dp),
             shape = MaterialTheme.shapes.medium
         ) {
-            Text("Submit Order", style = MaterialTheme.typography.labelLarge)
+            Text("Place Order", style = MaterialTheme.typography.labelLarge)
         }
-    }
-
-    LaunchedEffect(showSuccessMessage) {
-        if (showSuccessMessage) {
-            scope.launch {
-                snackbarHostState.showSnackbar("Order placed successfully!")
-                showSuccessMessage = false
-            }
-        }
+        error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp)) }
     }
 }

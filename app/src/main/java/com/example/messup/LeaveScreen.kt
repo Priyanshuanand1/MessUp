@@ -8,23 +8,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.launch
 
 @Composable
 fun LeaveScreen() {
     var reason by remember { mutableStateOf("") }
     val db = FirebaseFirestore.getInstance()
     val auth = FirebaseAuth.getInstance()
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-    var showSuccessMessage by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -34,41 +31,37 @@ fun LeaveScreen() {
                 OutlinedTextField(
                     value = reason,
                     onValueChange = { reason = it },
-                    label = { Text("Reason for leave") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = false
+                    label = { Text("Reason for Leave") },
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }
+        Spacer(modifier = Modifier.height(16.dp))
         Button(
             onClick = {
-                if (reason.isNotEmpty()) {
-                    val leaveData = hashMapOf("reason" to reason, "user" to auth.currentUser?.email)
+                val userEmail = auth.currentUser?.email
+                if (userEmail != null && reason.isNotEmpty()) {
+                    val leaveData = hashMapOf(
+                        "userEmail" to userEmail,
+                        "reason" to reason,
+                        "status" to "Pending"
+                    )
                     db.collection("leave_requests").add(leaveData)
                         .addOnSuccessListener {
                             reason = ""
-                            showSuccessMessage = true
                         }
                         .addOnFailureListener {
-                            scope.launch {
-                                snackbarHostState.showSnackbar("Failed to submit leave")
-                            }
+                            error = "Failed to submit leave request: ${it.message}"
                         }
+                } else {
+                    error = "Reason cannot be empty"
                 }
             },
             modifier = Modifier.fillMaxWidth().height(50.dp),
             shape = MaterialTheme.shapes.medium
         ) {
-            Text("Submit Leave", style = MaterialTheme.typography.labelLarge)
+            Text("Submit Leave Request", style = MaterialTheme.typography.labelLarge)
         }
-    }
-
-    LaunchedEffect(showSuccessMessage) {
-        if (showSuccessMessage) {
-            scope.launch {
-                snackbarHostState.showSnackbar("Leave request submitted!")
-                showSuccessMessage = false
-            }
-        }
+        error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp)) }
     }
 }
