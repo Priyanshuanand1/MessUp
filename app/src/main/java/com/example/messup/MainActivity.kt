@@ -55,5 +55,6 @@ fun MessUpApp() {
         composable("home") { HomeScreen(navController) }
         composable("admin") { AdminScreen(navController) }
         composable("admin_signup") { AdminSignupScreen(navController) }
+        composable("admin_login") { AdminLoginScreen(navController) }
     }
 }

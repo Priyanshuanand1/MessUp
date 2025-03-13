@@ -60,9 +60,17 @@ fun LoginScreen(navController: NavController) {
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = {
+                    if (email.isEmpty() || password.isEmpty()) {
+                        error = "Email and password are required"
+                        return@Button
+                    }
                     auth.signInWithEmailAndPassword(email, password)
                         .addOnCompleteListener { task ->
-                            if (task.isSuccessful) navController.navigate("home") else error = task.exception?.message
+                            if (task.isSuccessful) {
+                                navController.navigate("home")
+                            } else {
+                                error = task.exception?.message ?: "Login failed"
+                            }
                         }
                 },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
@@ -73,40 +81,13 @@ fun LoginScreen(navController: NavController) {
             Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = {
-                    auth.signInWithEmailAndPassword(email, password)
-                        .addOnCompleteListener { task ->
-                            if (task.isSuccessful) {
-                                val db = FirebaseFirestore.getInstance()
-                                db.collection("users").document(email).get()
-                                    .addOnSuccessListener { doc ->
-                                        if (doc.exists() && doc.getString("role") == "admin") {
-                                            navController.navigate("admin")
-                                        } else {
-                                            error = "Not an admin account"
-                                        }
-                                    }
-                                    .addOnFailureListener {
-                                        error = "Failed to verify admin: ${it.message}"
-                                    }
-                            } else {
-                                error = task.exception?.message
-                            }
-                        }
+                    navController.navigate("admin_login")
                 },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = MaterialTheme.shapes.medium,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
             ) {
-                Text("Admin Sign-In", style = MaterialTheme.typography.labelLarge)
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Button(
-                onClick = { navController.navigate("admin_signup") },
-                modifier = Modifier.fillMaxWidth().height(50.dp),
-                shape = MaterialTheme.shapes.medium,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-            ) {
-                Text("Admin Sign-Up", style = MaterialTheme.typography.labelLarge)
+                Text("Admin Login Panel", style = MaterialTheme.typography.labelLarge)
             }
             Spacer(modifier = Modifier.height(8.dp))
             TextButton(onClick = { navController.navigate("signup") }) {

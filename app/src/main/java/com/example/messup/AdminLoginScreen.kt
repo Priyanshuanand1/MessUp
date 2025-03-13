@@ -21,7 +21,7 @@ fun AdminLoginScreen(navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Admin Login") },
+                title = { Text("Admin Login Panel") },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary
@@ -60,37 +60,45 @@ fun AdminLoginScreen(navController: NavController) {
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = {
+                    if (email.isEmpty() || password.isEmpty()) {
+                        error = "Email and password are required"
+                        return@Button
+                    }
                     auth.signInWithEmailAndPassword(email, password)
                         .addOnCompleteListener { task ->
                             if (task.isSuccessful) {
-                                // Check if the user is an admin
                                 val db = FirebaseFirestore.getInstance()
                                 db.collection("users").document(email).get()
                                     .addOnSuccessListener { doc ->
                                         if (doc.exists() && doc.getString("role") == "admin") {
                                             navController.navigate("admin")
                                         } else {
-                                            error = "This email is not authorized as an admin"
-                                            auth.signOut() // Sign out if not an admin
+                                            error = "Not an admin account"
+                                            auth.signOut()
                                         }
                                     }
-                                    .addOnFailureListener {
-                                        error = "Failed to verify admin status: ${it.message}"
+                                    .addOnFailureListener { exception ->
+                                        error = "Failed to verify admin: ${exception.message}"
                                         auth.signOut()
                                     }
                             } else {
-                                error = task.exception?.message
+                                error = task.exception?.message ?: "Admin login failed"
                             }
                         }
                 },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = MaterialTheme.shapes.medium
             ) {
-                Text("Admin Login", style = MaterialTheme.typography.labelLarge)
+                Text("Admin Sign-In", style = MaterialTheme.typography.labelLarge)
             }
             Spacer(modifier = Modifier.height(8.dp))
-            TextButton(onClick = { navController.popBackStack() }) {
-                Text("Back to User Login")
+            Button(
+                onClick = { navController.navigate("admin_signup") },
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                shape = MaterialTheme.shapes.medium,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+            ) {
+                Text("Admin Sign-Up", style = MaterialTheme.typography.labelLarge)
             }
             error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp)) }
         }

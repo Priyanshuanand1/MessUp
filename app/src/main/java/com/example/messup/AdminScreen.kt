@@ -26,7 +26,6 @@ fun AdminScreen(navController: NavController) {
     var showSuccessMessage by remember { mutableStateOf(false) }
     var showAdminMode by remember { mutableStateOf(true) }
 
-    // Fetch all users
     LaunchedEffect(Unit) {
         db.collection("users").get()
             .addOnSuccessListener { result ->
@@ -60,7 +59,6 @@ fun AdminScreen(navController: NavController) {
         }
     ) { paddingValues ->
         if (showAdminMode) {
-            // Admin Mode
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -159,18 +157,32 @@ fun AdminScreen(navController: NavController) {
                             modifier = Modifier.fillMaxWidth(),
                             elevation = CardDefaults.cardElevation(2.dp)
                         ) {
-                            Row(
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                    .padding(16.dp)
                             ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "Email: ${user["email"].toString()}",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    Text(
+                                        text = "Role: ${user["role"].toString()}",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = user["email"].toString(),
+                                    text = "Name: ${user["name"]?.toString() ?: "N/A"}",
                                     style = MaterialTheme.typography.bodyMedium
                                 )
+                                Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = user["role"].toString(),
+                                    text = "Room No: ${user["roomNo"]?.toString() ?: "N/A"}",
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                             }
@@ -200,22 +212,8 @@ fun AdminScreen(navController: NavController) {
                         }
                     }
                 }
-
-                // Logout Button
-                Button(
-                    onClick = {
-                        FirebaseAuth.getInstance().signOut()
-                        navController.navigate("login") { popUpTo(0) }
-                    },
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
-                    shape = MaterialTheme.shapes.medium,
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                ) {
-                    Text("Logout", style = MaterialTheme.typography.labelLarge)
-                }
             }
         } else {
-            // User Mode (show HomeScreen without admin check)
             HomeScreen(navController, modifier = Modifier.padding(paddingValues))
         }
     }

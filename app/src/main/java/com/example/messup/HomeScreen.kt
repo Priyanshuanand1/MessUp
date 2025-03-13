@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
@@ -134,7 +135,7 @@ fun HomeScreen(navController: NavController, modifier: Modifier = Modifier) {
                         .padding(16.dp)
                         .height(50.dp),
                     shape = MaterialTheme.shapes.medium,
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red) // Changed to red
                 ) {
                     Text("Logout", style = MaterialTheme.typography.labelLarge)
                 }
