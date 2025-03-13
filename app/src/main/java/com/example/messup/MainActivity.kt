@@ -3,60 +3,50 @@ package com.example.messup
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.Modifier
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.FirebaseApp
+import com.example.messup.ui.theme.MessUpTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Initialize Firebase
+        try {
+            FirebaseApp.initializeApp(this)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
         setContent {
             MessUpTheme {
-                MessUpApp()
+                AppNavigation()
             }
         }
     }
 }
 
 @Composable
-fun MessUpTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = lightColorScheme(
-            primary = Color(0xFF0288D1),
-            onPrimary = Color.White,
-            secondary = Color(0xFF4CAF50),
-            onSecondary = Color.White,
-            surface = Color(0xFFF5F5F5),
-            onSurface = Color.Black
-        ),
-        typography = Typography(
-            titleLarge = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold),
-            bodyMedium = TextStyle(fontSize = 16.sp)
-        ),
-        content = content
-    )
-}
-
-@Composable
-fun MessUpApp() {
+fun AppNavigation() {
     val navController = rememberNavController()
-    val auth = FirebaseAuth.getInstance()
-
-    NavHost(navController = navController, startDestination = if (auth.currentUser == null) "login" else "home") {
+    NavHost(navController = navController, startDestination = "login") {
         composable("login") { LoginScreen(navController) }
         composable("signup") { SignupScreen(navController) }
+        composable("admin_login") { AdminLoginScreen(navController) }
+        composable("admin_signup") { AdminSignupScreen(navController) }
         composable("home") { HomeScreen(navController) }
         composable("admin") { AdminScreen(navController) }
-        composable("admin_signup") { AdminSignupScreen(navController) }
-        composable("admin_login") { AdminLoginScreen(navController) }
-        composable("manage_leave_requests") { LeaveRequestsScreen(navController) }
+        composable("menu") { MenuScreen() }
+        composable("order") { OrderScreen() }
+        composable("feedback") { FeedbackScreen() }
+        composable("leave") { LeaveScreen() }
         composable("manage_feedbacks") { FeedbacksScreen(navController) }
+        composable("manage_leave_requests") { LeaveRequestsScreen(navController) }
+        composable("announcements") { AnnouncementsScreen() }
     }
 }
