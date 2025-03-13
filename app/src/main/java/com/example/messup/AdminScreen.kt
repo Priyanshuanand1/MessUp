@@ -40,7 +40,7 @@ fun AdminScreen(navController: NavController) {
     var drawerState = rememberDrawerState(DrawerValue.Closed)
     val scopeDrawer = rememberCoroutineScope()
 
-    // Real-time listeners with error handling
+    // Real-time listeners with robust error handling
     DisposableEffect(Unit) {
         try {
             val menuListener = db.collection("menu")
@@ -54,10 +54,12 @@ fun AdminScreen(navController: NavController) {
                     }
                     if (snapshot != null) {
                         val updatedMenuItems = snapshot.documents.mapNotNull { doc ->
-                            doc.data?.takeIf { it.isNotEmpty() }
+                            doc.data?.takeIf { it.containsKey("item") } ?: emptyMap()
                         }
                         menuItems = updatedMenuItems
                         println("Updated menuItems size: ${menuItems.size}")
+                    } else {
+                        println("No menu items snapshot received")
                     }
                 }
             menuListenerRegistration = menuListener
@@ -73,7 +75,7 @@ fun AdminScreen(navController: NavController) {
                     if (snapshot != null) {
                         feedbacks = snapshot.documents.map { doc ->
                             val data = doc.data ?: emptyMap()
-                            data + mapOf("id" to doc.id)
+                            data + mapOf("id" to (doc.id ?: ""))
                         }
                     }
                 }
@@ -90,7 +92,7 @@ fun AdminScreen(navController: NavController) {
                     if (snapshot != null) {
                         leaveRequests = snapshot.documents.map { doc ->
                             val data = doc.data ?: emptyMap()
-                            data + mapOf("id" to doc.id)
+                            data + mapOf("id" to (doc.id ?: ""))
                         }
                     }
                 }
@@ -107,13 +109,13 @@ fun AdminScreen(navController: NavController) {
                     if (snapshot != null) {
                         orders = snapshot.documents.map { doc ->
                             val data = doc.data ?: emptyMap()
-                            data + mapOf("id" to doc.id)
+                            data + mapOf("id" to (doc.id ?: ""))
                         }
                     }
                 }
             ordersListenerRegistration = ordersListener
         } catch (e: Exception) {
-            println("Error setting up listeners: ${e.message}")
+            println("Error setting up Firestore listeners: ${e.message}")
         }
 
         onDispose {
@@ -160,16 +162,16 @@ fun AdminScreen(navController: NavController) {
                         containerColor = MaterialTheme.colorScheme.primary,
                         titleContentColor = MaterialTheme.colorScheme.onPrimary
                     ),
-                    actions = {
-                        IconButton(
-                            onClick = { scopeDrawer.launch { drawerState.open() } }
-                        ) {
+                    navigationIcon = {
+                        IconButton(onClick = { scopeDrawer.launch { drawerState.open() } }) {
                             Icon(
-                                imageVector = Icons.Default.Menu,
+                                imageVector = Icons.Filled.Menu,
                                 contentDescription = "Open Drawer",
                                 tint = MaterialTheme.colorScheme.onPrimary
                             )
                         }
+                    },
+                    actions = {
                         Button(
                             onClick = {
                                 FirebaseAuth.getInstance().signOut()
@@ -200,10 +202,10 @@ fun AdminScreen(navController: NavController) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 8.dp),
-                        elevation = CardDefaults.cardElevation(4.dp)
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Add User", style = MaterialTheme.typography.headlineSmall, fontSize = 18.sp)
+                            Text("Add User", style = MaterialTheme.typography.titleLarge, fontSize = 18.sp)
                             Spacer(modifier = Modifier.height(12.dp))
                             OutlinedTextField(
                                 value = userName,
@@ -247,7 +249,7 @@ fun AdminScreen(navController: NavController) {
                                             }
                                             .addOnFailureListener {
                                                 scope.launch {
-                                                    snackbarHostState.showSnackbar("Failed to add user")
+                                                    snackbarHostState.showSnackbar("Failed to add user: ${it.message}")
                                                 }
                                             }
                                     } else {
@@ -273,10 +275,10 @@ fun AdminScreen(navController: NavController) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 8.dp),
-                        elevation = CardDefaults.cardElevation(4.dp)
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Add Menu Item", style = MaterialTheme.typography.headlineSmall, fontSize = 18.sp)
+                            Text("Add Menu Item", style = MaterialTheme.typography.titleLarge, fontSize = 18.sp)
                             Spacer(modifier = Modifier.height(12.dp))
                             OutlinedTextField(
                                 value = menuItem,
@@ -298,7 +300,7 @@ fun AdminScreen(navController: NavController) {
                                             }
                                             .addOnFailureListener {
                                                 scope.launch {
-                                                    snackbarHostState.showSnackbar("Failed to add menu item")
+                                                    snackbarHostState.showSnackbar("Failed to add menu item: ${it.message}")
                                                 }
                                                 println("Failed to add menu item: ${it.message}")
                                             }
@@ -317,13 +319,15 @@ fun AdminScreen(navController: NavController) {
 
                 // Display All Menu Items
                 item {
-                    Text("Menu Items", style = MaterialTheme.typography.headlineSmall, fontSize = 18.sp)
+                    Text("Menu Items", style = MaterialTheme.typography.titleLarge, fontSize = 18.sp)
                     Spacer(modifier = Modifier.height(8.dp))
                     if (menuItems.isEmpty()) {
                         Text("No menu items available.", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                     } else {
                         LazyColumn(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 200.dp), // Constrain height
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             items(menuItems) { item ->
@@ -331,7 +335,7 @@ fun AdminScreen(navController: NavController) {
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(vertical = 4.dp),
-                                    elevation = CardDefaults.cardElevation(2.dp)
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                                 ) {
                                     Text(
                                         text = item["item"]?.toString() ?: "Unknown Item",
@@ -349,13 +353,15 @@ fun AdminScreen(navController: NavController) {
 
                 // Display Feedbacks
                 item {
-                    Text("Feedbacks", style = MaterialTheme.typography.headlineSmall, fontSize = 18.sp)
+                    Text("Feedbacks", style = MaterialTheme.typography.titleLarge, fontSize = 18.sp)
                     Spacer(modifier = Modifier.height(8.dp))
                     if (feedbacks.isEmpty()) {
                         Text("No feedbacks available.", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                     } else {
                         LazyColumn(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 200.dp), // Constrain height
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             items(feedbacks) { feedback ->
@@ -363,7 +369,7 @@ fun AdminScreen(navController: NavController) {
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(vertical = 4.dp),
-                                    elevation = CardDefaults.cardElevation(2.dp)
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                                 ) {
                                     Column(
                                         modifier = Modifier
@@ -396,13 +402,15 @@ fun AdminScreen(navController: NavController) {
 
                 // Display Leave Requests
                 item {
-                    Text("Leave Requests", style = MaterialTheme.typography.headlineSmall, fontSize = 18.sp)
+                    Text("Leave Requests", style = MaterialTheme.typography.titleLarge, fontSize = 18.sp)
                     Spacer(modifier = Modifier.height(8.dp))
                     if (leaveRequests.isEmpty()) {
                         Text("No leave requests available.", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                     } else {
                         LazyColumn(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 200.dp), // Constrain height
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             items(leaveRequests) { leave ->
@@ -416,7 +424,7 @@ fun AdminScreen(navController: NavController) {
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(vertical = 4.dp),
-                                    elevation = CardDefaults.cardElevation(2.dp),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                                     colors = CardDefaults.cardColors(containerColor = cardColor)
                                 ) {
                                     Column(
@@ -453,13 +461,15 @@ fun AdminScreen(navController: NavController) {
 
                 // Display Orders
                 item {
-                    Text("Orders", style = MaterialTheme.typography.headlineSmall, fontSize = 18.sp)
+                    Text("Orders", style = MaterialTheme.typography.titleLarge, fontSize = 18.sp)
                     Spacer(modifier = Modifier.height(8.dp))
                     if (orders.isEmpty()) {
                         Text("No orders available.", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                     } else {
                         LazyColumn(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 200.dp), // Constrain height
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             items(orders) { order ->
@@ -467,7 +477,7 @@ fun AdminScreen(navController: NavController) {
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(vertical = 4.dp),
-                                    elevation = CardDefaults.cardElevation(2.dp)
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                                 ) {
                                     Column(
                                         modifier = Modifier

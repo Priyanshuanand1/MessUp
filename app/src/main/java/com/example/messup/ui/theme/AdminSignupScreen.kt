@@ -8,97 +8,88 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminSignupScreen(navController: NavController) {
-    val auth = FirebaseAuth.getInstance()
-    val db = FirebaseFirestore.getInstance()
-    var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val auth = FirebaseAuth.getInstance()
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Admin Sign-Up") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary
-                )
-            )
-        }
-    ) { padding ->
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(paddingValues)
                 .padding(16.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(4.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    OutlinedTextField(
-                        value = name,
-                        onValueChange = { name = it },
-                        label = { Text("Name") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = email,
-                        onValueChange = { email = it },
-                        label = { Text("Email") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = password,
-                        onValueChange = { password = it },
-                        label = { Text("Password") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
+            Text("Admin Signup", style = MaterialTheme.typography.headlineMedium)
+            Spacer(modifier = Modifier.height(16.dp))
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Email") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Password") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = confirmPassword,
+                onValueChange = { confirmPassword = it },
+                label = { Text("Confirm Password") },
+                modifier = Modifier.fillMaxWidth()
+            )
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = {
-                    if (name.isNotEmpty() && email.isNotEmpty() && password.isNotEmpty()) {
-                        auth.createUserWithEmailAndPassword(email, password)
-                            .addOnCompleteListener { task ->
-                                if (task.isSuccessful) {
-                                    val userData = hashMapOf(
-                                        "name" to name,
-                                        "email" to email,
-                                        "role" to "admin"
-                                    )
-                                    db.collection("users").document(email).set(userData)
-                                        .addOnSuccessListener {
-                                            navController.navigate("admin")
-                                        }
-                                        .addOnFailureListener {
-                                            error = "Failed to save admin data: ${it.message}"
-                                        }
-                                } else {
-                                    error = task.exception?.message
+                    if (email.isNotEmpty() && password.isNotEmpty() && confirmPassword.isNotEmpty()) {
+                        if (password == confirmPassword) {
+                            auth.createUserWithEmailAndPassword(email, password)
+                                .addOnCompleteListener { task ->
+                                    if (task.isSuccessful) {
+                                        navController.navigate("admin_login") { popUpTo(0) }
+                                    } else {
+                                        error = task.exception?.message ?: "Signup failed"
+                                    }
                                 }
-                            }
+                        } else {
+                            error = "Passwords do not match"
+                        }
                     } else {
-                        error = "All fields are required"
+                        error = "Please fill all fields"
                     }
                 },
-                modifier = Modifier.fillMaxWidth().height(50.dp),
-                shape = MaterialTheme.shapes.medium
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Sign Up as Admin", style = MaterialTheme.typography.labelLarge)
+                Text("Sign Up")
             }
             error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp)) }
+            Spacer(modifier = Modifier.height(16.dp))
+            TextButton(onClick = { navController.navigate("admin_login") }) {
+                Text("Already have an account? Login")
+            }
+        }
+    }
+
+    LaunchedEffect(error) {
+        error?.let {
+            scope.launch {
+                snackbarHostState.showSnackbar(it)
+            }
         }
     }
 }

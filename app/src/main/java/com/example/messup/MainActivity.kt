@@ -38,9 +38,9 @@ fun AppNavigation() {
         composable("login") { LoginScreen(navController) }
         composable("signup") { SignupScreen(navController) }
         composable("admin_login") { AdminLoginScreen(navController) }
-        composable("admin_signup") { AdminSignupScreen(navController) }
+        composable("admin_signup") { AdminSignupScreen(navController) } // Correct route
         composable("home") { HomeScreen(navController) }
-        composable("admin") { AdminScreen(navController) }
+        composable("admin") { AdminScreen(navController) } // Correct route
         composable("menu") { MenuScreen() }
         composable("order") { OrderScreen() }
         composable("feedback") { FeedbackScreen() }
