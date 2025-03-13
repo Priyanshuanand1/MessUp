@@ -30,13 +30,12 @@ fun AdminScreen(navController: NavController) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var showSuccessMessage by remember { mutableStateOf(false) }
-    var showAdminMode by remember { mutableStateOf(true) }
     var menuListenerRegistration by remember { mutableStateOf<ListenerRegistration?>(null) }
     var feedbackListenerRegistration by remember { mutableStateOf<ListenerRegistration?>(null) }
     var leaveListenerRegistration by remember { mutableStateOf<ListenerRegistration?>(null) }
     var ordersListenerRegistration by remember { mutableStateOf<ListenerRegistration?>(null) }
 
-    // Real-time listener for menu items
+    // Real-time listener for menu items with debug logging
     DisposableEffect(Unit) {
         val menuListener = db.collection("menu")
             .addSnapshotListener { snapshot, e ->
@@ -44,10 +43,19 @@ fun AdminScreen(navController: NavController) {
                     scope.launch {
                         snackbarHostState.showSnackbar("Error fetching menu items: ${e.message}")
                     }
+                    println("Error fetching menu items: ${e.message}") // Debug log
                     return@addSnapshotListener
                 }
                 if (snapshot != null) {
-                    menuItems = snapshot.documents.map { it.data ?: emptyMap() }
+                    val updatedMenuItems = snapshot.documents.map { doc ->
+                        val data = doc.data ?: emptyMap()
+                        println("Fetched menu item: ${data["item"]}") // Debug log
+                        data
+                    }
+                    menuItems = updatedMenuItems
+                    println("Updated menuItems size: ${menuItems.size}") // Debug log
+                } else {
+                    println("No menu items snapshot received") // Debug log
                 }
             }
         menuListenerRegistration = menuListener
@@ -64,7 +72,7 @@ fun AdminScreen(navController: NavController) {
                 if (snapshot != null) {
                     feedbacks = snapshot.documents.map { doc ->
                         val data = doc.data ?: emptyMap()
-                        data + mapOf("id" to doc.id) // Include document ID for later updates
+                        data + mapOf("id" to doc.id)
                     }
                 }
             }
@@ -82,7 +90,7 @@ fun AdminScreen(navController: NavController) {
                 if (snapshot != null) {
                     leaveRequests = snapshot.documents.map { doc ->
                         val data = doc.data ?: emptyMap()
-                        data + mapOf("id" to doc.id) // Include document ID for later updates
+                        data + mapOf("id" to doc.id)
                     }
                 }
             }
@@ -118,316 +126,311 @@ fun AdminScreen(navController: NavController) {
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(if (showAdminMode) "Admin Panel" else "MessUp") },
+                title = { Text("Admin Panel") },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary
                 ),
                 actions = {
                     Button(
-                        onClick = { showAdminMode = !showAdminMode },
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                        onClick = {
+                            FirebaseAuth.getInstance().signOut()
+                            navController.navigate("login") { popUpTo(0) }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
                         modifier = Modifier.padding(end = 8.dp)
                     ) {
-                        Text(if (showAdminMode) "User Mode" else "Admin Mode")
+                        Text("Logout", style = MaterialTheme.typography.labelMedium)
                     }
                 }
             )
         }
     ) { paddingValues ->
-        if (showAdminMode) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(horizontal = 16.dp, vertical = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp, vertical = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Add User Section
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(4.dp)
             ) {
-                // Add User Section
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    elevation = CardDefaults.cardElevation(4.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Add User", style = MaterialTheme.typography.titleLarge)
-                        OutlinedTextField(
-                            value = userName,
-                            onValueChange = { userName = it },
-                            label = { Text("Name") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedTextField(
-                            value = userEmail,
-                            onValueChange = { userEmail = it },
-                            label = { Text("Email") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedTextField(
-                            value = userRoomNo,
-                            onValueChange = { userRoomNo = it },
-                            label = { Text("Room No") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-                    }
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Add User", style = MaterialTheme.typography.titleLarge)
+                    OutlinedTextField(
+                        value = userName,
+                        onValueChange = { userName = it },
+                        label = { Text("Name") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = userEmail,
+                        onValueChange = { userEmail = it },
+                        label = { Text("Email") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = userRoomNo,
+                        onValueChange = { userRoomNo = it },
+                        label = { Text("Room No") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
                 }
-                Button(
-                    onClick = {
-                        if (userEmail.isNotEmpty() && userName.isNotEmpty() && userRoomNo.isNotEmpty()) {
-                            val userData = hashMapOf(
-                                "name" to userName,
-                                "email" to userEmail,
-                                "roomNo" to userRoomNo,
-                                "role" to "user"
-                            )
-                            db.collection("users").document(userEmail).set(userData)
-                                .addOnSuccessListener {
-                                    userEmail = ""
-                                    userName = ""
-                                    userRoomNo = ""
-                                    showSuccessMessage = true
-                                }
-                                .addOnFailureListener {
-                                    scope.launch {
-                                        snackbarHostState.showSnackbar("Failed to add user")
-                                    }
-                                }
-                        } else {
-                            scope.launch {
-                                snackbarHostState.showSnackbar("All fields are required")
+            }
+            Button(
+                onClick = {
+                    if (userEmail.isNotEmpty() && userName.isNotEmpty() && userRoomNo.isNotEmpty()) {
+                        val userData = hashMapOf(
+                            "name" to userName,
+                            "email" to userEmail,
+                            "roomNo" to userRoomNo,
+                            "role" to "user"
+                        )
+                        db.collection("users").document(userEmail).set(userData)
+                            .addOnSuccessListener {
+                                userEmail = ""
+                                userName = ""
+                                userRoomNo = ""
+                                showSuccessMessage = true
                             }
+                            .addOnFailureListener {
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("Failed to add user")
+                                }
+                            }
+                    } else {
+                        scope.launch {
+                            snackbarHostState.showSnackbar("All fields are required")
                         }
-                    },
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
-                    shape = MaterialTheme.shapes.medium
-                ) {
-                    Text("Add User", style = MaterialTheme.typography.labelLarge)
-                }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Text("Add User", style = MaterialTheme.typography.labelLarge)
+            }
 
-                // Add Menu Item Section
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    elevation = CardDefaults.cardElevation(4.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Add Menu Item", style = MaterialTheme.typography.titleLarge)
-                        OutlinedTextField(
-                            value = menuItem,
-                            onValueChange = { menuItem = it },
-                            label = { Text("Menu Item") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
+            // Add Menu Item Section
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(4.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Add Menu Item", style = MaterialTheme.typography.titleLarge)
+                    OutlinedTextField(
+                        value = menuItem,
+                        onValueChange = { menuItem = it },
+                        label = { Text("Menu Item") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+            }
+            Button(
+                onClick = {
+                    if (menuItem.isNotEmpty()) {
+                        val menuData = hashMapOf("item" to menuItem)
+                        db.collection("menu").add(menuData)
+                            .addOnSuccessListener {
+                                menuItem = ""
+                                showSuccessMessage = true
+                                println("Menu item added successfully: $menuItem") // Debug log
+                            }
+                            .addOnFailureListener {
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("Failed to add menu item")
+                                }
+                                println("Failed to add menu item: ${it.message}") // Debug log
+                            }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Text("Add Menu Item", style = MaterialTheme.typography.labelLarge)
+            }
+
+            // Display All Menu Items
+            Spacer(modifier = Modifier.height(16.dp))
+            Text("Menu Items", style = MaterialTheme.typography.titleLarge)
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(menuItems) { item ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(2.dp)
+                    ) {
+                        Text(
+                            text = item["item"]?.toString() ?: "Unknown Item",
+                            modifier = Modifier.padding(16.dp),
+                            style = MaterialTheme.typography.bodyMedium
                         )
                     }
                 }
-                Button(
-                    onClick = {
-                        if (menuItem.isNotEmpty()) {
-                            val menuData = hashMapOf("item" to menuItem)
-                            db.collection("menu").add(menuData)
-                                .addOnSuccessListener {
-                                    menuItem = ""
-                                    showSuccessMessage = true
-                                }
-                                .addOnFailureListener {
-                                    scope.launch {
-                                        snackbarHostState.showSnackbar("Failed to add menu item")
-                                    }
-                                }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
-                    shape = MaterialTheme.shapes.medium
-                ) {
-                    Text("Add Menu Item", style = MaterialTheme.typography.labelLarge)
-                }
+            }
 
-                // Display All Menu Items
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Menu Items", style = MaterialTheme.typography.titleLarge)
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+            // Display Feedbacks
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Feedbacks", style = MaterialTheme.typography.titleLarge)
+                Button(
+                    onClick = { navController.navigate("manage_feedbacks") },
+                    modifier = Modifier.height(40.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                 ) {
-                    items(menuItems) { item ->
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            elevation = CardDefaults.cardElevation(2.dp)
+                    Text("Manage Feedbacks", style = MaterialTheme.typography.labelMedium)
+                }
+            }
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(feedbacks) { feedback ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(2.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
                         ) {
                             Text(
-                                text = item["item"].toString(),
-                                modifier = Modifier.padding(16.dp),
+                                text = "User: ${feedback["userEmail"]?.toString() ?: "N/A"}",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Feedback: ${feedback["feedback"]?.toString() ?: "N/A"}",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Status: ${feedback["status"]?.toString() ?: "Pending"}",
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
                     }
                 }
+            }
 
-                // Display Feedbacks
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Feedbacks", style = MaterialTheme.typography.titleLarge)
-                    Button(
-                        onClick = { navController.navigate("manage_feedbacks") },
-                        modifier = Modifier.height(40.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                    ) {
-                        Text("Manage Feedbacks", style = MaterialTheme.typography.labelMedium)
-                    }
-                }
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(feedbacks) { feedback ->
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            elevation = CardDefaults.cardElevation(2.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp)
-                            ) {
-                                Text(
-                                    text = "User: ${feedback["userEmail"]?.toString() ?: "N/A"}",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Feedback: ${feedback["feedback"]?.toString() ?: "N/A"}",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Status: ${feedback["status"]?.toString() ?: "Pending"}",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Display Leave Requests
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Leave Requests", style = MaterialTheme.typography.titleLarge)
-                    Button(
-                        onClick = { navController.navigate("manage_leave_requests") },
-                        modifier = Modifier.height(40.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                    ) {
-                        Text("Manage Leave Requests", style = MaterialTheme.typography.labelMedium)
-                    }
-                }
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(leaveRequests) { leave ->
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            elevation = CardDefaults.cardElevation(2.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp)
-                            ) {
-                                Text(
-                                    text = "User: ${leave["userEmail"]?.toString() ?: "N/A"}",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Reason: ${leave["reason"]?.toString() ?: "N/A"}",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Status: ${leave["status"]?.toString() ?: "Pending"}",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Display Orders
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Orders", style = MaterialTheme.typography.titleLarge)
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(orders) { order ->
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            elevation = CardDefaults.cardElevation(2.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp)
-                            ) {
-                                Text(
-                                    text = "User: ${order["userEmail"]?.toString() ?: "N/A"}",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Item: ${order["item"]?.toString() ?: "N/A"}",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Status: ${order["status"]?.toString() ?: "Pending"}",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Logout Button
+            // Display Leave Requests
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Leave Requests", style = MaterialTheme.typography.titleLarge)
                 Button(
-                    onClick = {
-                        FirebaseAuth.getInstance().signOut()
-                        navController.navigate("login") { popUpTo(0) }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .height(50.dp),
-                    shape = MaterialTheme.shapes.medium,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                    onClick = { navController.navigate("manage_leave_requests") },
+                    modifier = Modifier.height(40.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                 ) {
-                    Text("Logout", style = MaterialTheme.typography.labelLarge)
+                    Text("Manage Leave Requests", style = MaterialTheme.typography.labelMedium)
                 }
             }
-        } else {
-            HomeScreen(navController, modifier = Modifier.padding(paddingValues))
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(leaveRequests) { leave ->
+                    val status = leave["status"]?.toString() ?: "Pending"
+                    val cardColor = when (status) {
+                        "Accepted" -> Color(0xFF4CAF50) // Green
+                        "Rejected" -> Color(0xFFE53935) // Red
+                        else -> MaterialTheme.colorScheme.surface // Default for Pending
+                    }
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(2.dp),
+                        colors = CardDefaults.cardColors(containerColor = cardColor)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        ) {
+                            Text(
+                                text = "User: ${leave["userEmail"]?.toString() ?: "N/A"}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (status == "Pending") MaterialTheme.colorScheme.onSurface else Color.White
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Reason: ${leave["reason"]?.toString() ?: "N/A"}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (status == "Pending") MaterialTheme.colorScheme.onSurface else Color.White
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Status: $status",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (status == "Pending") MaterialTheme.colorScheme.onSurface else Color.White
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Display Orders
+            Spacer(modifier = Modifier.height(16.dp))
+            Text("Orders", style = MaterialTheme.typography.titleLarge)
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(orders) { order ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(2.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        ) {
+                            Text(
+                                text = "User: ${order["userEmail"]?.toString() ?: "N/A"}",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Item: ${order["item"]?.toString() ?: "N/A"}",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Status: ${order["status"]?.toString() ?: "Pending"}",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 

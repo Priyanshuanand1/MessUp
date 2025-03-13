@@ -71,9 +71,16 @@ fun LeaveRequestsScreen(navController: NavController) {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(leaveRequests) { leave ->
+                val status = leave["status"]?.toString() ?: "Pending"
+                val cardColor = when (status) {
+                    "Accepted" -> Color(0xFF4CAF50) // Green
+                    "Rejected" -> Color(0xFFE53935) // Red
+                    else -> MaterialTheme.colorScheme.surface // Default for Pending
+                }
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    elevation = CardDefaults.cardElevation(2.dp)
+                    elevation = CardDefaults.cardElevation(2.dp),
+                    colors = CardDefaults.cardColors(containerColor = cardColor)
                 ) {
                     Column(
                         modifier = Modifier
@@ -82,64 +89,67 @@ fun LeaveRequestsScreen(navController: NavController) {
                     ) {
                         Text(
                             text = "User: ${leave["userEmail"]?.toString() ?: "N/A"}",
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (status == "Pending") MaterialTheme.colorScheme.onSurface else Color.White
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "Reason: ${leave["reason"]?.toString() ?: "N/A"}",
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (status == "Pending") MaterialTheme.colorScheme.onSurface else Color.White
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Status: ${leave["status"]?.toString() ?: "Pending"}",
-                            style = MaterialTheme.typography.bodyMedium
+                            text = "Status: $status",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (status == "Pending") MaterialTheme.colorScheme.onSurface else Color.White
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Button(
-                                onClick = {
-                                    db.collection("leave_requests").document(leave["id"].toString())
-                                        .update("status", "Accepted")
-                                        .addOnSuccessListener {
-                                            scope.launch {
-                                                snackbarHostState.showSnackbar("Leave request accepted")
-                                            }
-                                        }
-                                        .addOnFailureListener {
-                                            scope.launch {
-                                                snackbarHostState.showSnackbar("Failed to update status")
-                                            }
-                                        }
-                                },
-                                modifier = Modifier.weight(1f),
-                                enabled = leave["status"]?.toString() == "Pending",
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                        if (status == "Pending") {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Text("Accept")
-                            }
-                            Button(
-                                onClick = {
-                                    db.collection("leave_requests").document(leave["id"].toString())
-                                        .update("status", "Rejected")
-                                        .addOnSuccessListener {
-                                            scope.launch {
-                                                snackbarHostState.showSnackbar("Leave request rejected")
+                                Button(
+                                    onClick = {
+                                        db.collection("leave_requests").document(leave["id"].toString())
+                                            .update("status", "Accepted")
+                                            .addOnSuccessListener {
+                                                scope.launch {
+                                                    snackbarHostState.showSnackbar("Leave request accepted")
+                                                }
                                             }
-                                        }
-                                        .addOnFailureListener {
-                                            scope.launch {
-                                                snackbarHostState.showSnackbar("Failed to update status")
+                                            .addOnFailureListener {
+                                                scope.launch {
+                                                    snackbarHostState.showSnackbar("Failed to update status")
+                                                }
                                             }
-                                        }
-                                },
-                                modifier = Modifier.weight(1f),
-                                enabled = leave["status"]?.toString() == "Pending",
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
-                            ) {
-                                Text("Reject")
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                                ) {
+                                    Text("Accept")
+                                }
+                                Button(
+                                    onClick = {
+                                        db.collection("leave_requests").document(leave["id"].toString())
+                                            .update("status", "Rejected")
+                                            .addOnSuccessListener {
+                                                scope.launch {
+                                                    snackbarHostState.showSnackbar("Leave request rejected")
+                                                }
+                                            }
+                                            .addOnFailureListener {
+                                                scope.launch {
+                                                    snackbarHostState.showSnackbar("Failed to update status")
+                                                }
+                                            }
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                                ) {
+                                    Text("Reject")
+                                }
                             }
                         }
                     }
