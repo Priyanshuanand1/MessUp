@@ -15,6 +15,11 @@
         android:theme="@style/Theme.MessUp"
         tools:targetApi="31">
         <activity
+            android:name=".ManageAnnouncementsScreen"
+            android:exported="false"
+            android:label="@string/title_activity_manage_announcements_screen"
+            android:theme="@style/Theme.MessUp" />
+        <activity
             android:name=".NavItem"
             android:exported="false"
             android:label="@string/title_activity_nav_item"
