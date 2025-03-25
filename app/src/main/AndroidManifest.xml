@@ -15,6 +15,16 @@
         android:theme="@style/Theme.MessUp"
         tools:targetApi="31">
         <activity
+            android:name=".ManageLeaveRequestsScreen"
+            android:exported="false"
+            android:label="@string/title_activity_manage_leave_requests_screen"
+            android:theme="@style/Theme.MessUp" />
+        <activity
+            android:name=".ManageFeedbacksScreen"
+            android:exported="false"
+            android:label="@string/title_activity_manage_feedbacks_screen"
+            android:theme="@style/Theme.MessUp" />
+        <activity
             android:name=".ManageAnnouncementsScreen"
             android:exported="false"
             android:label="@string/title_activity_manage_announcements_screen"

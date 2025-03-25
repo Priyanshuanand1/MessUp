@@ -16,6 +16,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import java.text.SimpleDateFormat
+import java.util.Locale
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -128,6 +130,11 @@ fun AnnouncementsScreen(navController: NavController) {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(announcements) { announcement ->
+                val timestamp = announcement["timestamp"]?.let { it as? com.google.firebase.Timestamp }
+                val formattedDate = timestamp?.toDate()?.let { date ->
+                    SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()).format(date)
+                } ?: "N/A"
+
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -147,6 +154,13 @@ fun AnnouncementsScreen(navController: NavController) {
                             text = "Message: ${announcement["message"]?.toString() ?: "N/A"}",
                             style = MaterialTheme.typography.bodyMedium,
                             fontSize = 14.sp
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Posted: $formattedDate",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )
                     }
                 }
