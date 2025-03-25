@@ -30,8 +30,6 @@ fun AdminScreen(navController: NavController) {
     var userName by remember { mutableStateOf("") }
     var userRoomNo by remember { mutableStateOf("") }
     var menuItem by remember { mutableStateOf("") }
-    var announcementTitle by remember { mutableStateOf("") }
-    var announcementMessage by remember { mutableStateOf("") }
     var menuItems by remember { mutableStateOf(listOf<Map<String, Any>>()) }
     var feedbacks by remember { mutableStateOf(listOf<Map<String, Any>>()) }
     var leaveRequests by remember { mutableStateOf(listOf<Map<String, Any>>()) }
@@ -146,6 +144,15 @@ fun AdminScreen(navController: NavController) {
                     onClick = {
                         scopeDrawer.launch { drawerState.close() }
                         navController.navigate("manage_leave_requests")
+                    },
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+                NavigationDrawerItem(
+                    label = { Text("Manage Announcements", fontSize = 16.sp) },
+                    selected = false,
+                    onClick = {
+                        scopeDrawer.launch { drawerState.close() }
+                        navController.navigate("manage_announcements")
                     },
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
@@ -336,67 +343,6 @@ fun AdminScreen(navController: NavController) {
                                 shape = MaterialTheme.shapes.medium
                             ) {
                                 Text("Add Menu Item", fontSize = 16.sp)
-                            }
-                        }
-                    }
-                }
-
-                item {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Create Announcement", style = MaterialTheme.typography.titleLarge, fontSize = 18.sp)
-                            Spacer(modifier = Modifier.height(12.dp))
-                            OutlinedTextField(
-                                value = announcementTitle,
-                                onValueChange = { announcementTitle = it },
-                                label = { Text("Title", fontSize = 14.sp) },
-                                modifier = Modifier.fillMaxWidth(),
-                                singleLine = true
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            OutlinedTextField(
-                                value = announcementMessage,
-                                onValueChange = { announcementMessage = it },
-                                label = { Text("Message", fontSize = 14.sp) },
-                                modifier = Modifier.fillMaxWidth(),
-                                singleLine = false
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Button(
-                                onClick = {
-                                    if (announcementTitle.isNotEmpty() && announcementMessage.isNotEmpty()) {
-                                        val announcementData = hashMapOf(
-                                            "title" to announcementTitle,
-                                            "message" to announcementMessage
-                                        )
-                                        db.collection("announcements").add(announcementData)
-                                            .addOnSuccessListener {
-                                                announcementTitle = ""
-                                                announcementMessage = ""
-                                                showSuccessMessage = true
-                                            }
-                                            .addOnFailureListener {
-                                                scope.launch {
-                                                    snackbarHostState.showSnackbar("Failed to create announcement: ${it.message}")
-                                                }
-                                            }
-                                    } else {
-                                        scope.launch {
-                                            snackbarHostState.showSnackbar("Title and message are required")
-                                        }
-                                    }
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(48.dp),
-                                shape = MaterialTheme.shapes.medium
-                            ) {
-                                Text("Create Announcement", fontSize = 16.sp)
                             }
                         }
                     }
